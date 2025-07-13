@@ -80,6 +80,7 @@ interface AuthContextType {
   validateSessionBeforeRequest: () => Promise<boolean>;
   setNavigationRef: (ref: any) => void;
   resetPassword: (newPassword: string) => Promise<{ success: boolean; message: string }>;
+  changePasswordUser: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   forgotPassword: (email: string) => Promise<{ success: boolean; message: string }>;
 }
 
@@ -388,6 +389,33 @@ export function AuthProvider(props: AuthProviderProps) {
     }
   };
 
+ const changePasswordUser = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+  if (!state.tokens?.access_token) {
+    throw new Error('No access token available');
+  }
+
+  const isSessionValid = await validateSessionBeforeRequest();
+  if (!isSessionValid) {
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  try {
+    console.log('Token validation passed, using direct password change method...');
+    
+    const result = await authApiClient.changePasswordDirect(
+      state.tokens.access_token, 
+      currentPassword, 
+      newPassword
+    );
+    
+    await logout();
+    return result;
+  } catch (error) {
+    console.log('AuthContext changePasswordUser error:', error);
+    throw error;
+  }
+};
+
   const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
       return await authApiClient.forgotPassword(email);
@@ -433,6 +461,7 @@ export function AuthProvider(props: AuthProviderProps) {
     validateSessionBeforeRequest,
     setNavigationRef,
     resetPassword,
+    changePasswordUser,
     forgotPassword,
   };
 
